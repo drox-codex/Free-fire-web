@@ -1,0 +1,21 @@
+{
+  "name": "Free Fire Web Edition",
+  "short_name": "Free Fire",
+  "description": "Tactical. Intense. Survival. The ultimate mobile shooter experience on web.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#ffcc00",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/freefireicon/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/freefireicon/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
