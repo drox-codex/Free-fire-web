@@ -33,7 +33,7 @@ export default function App() {
   const [kills, setKills] = useState(0);
   const [health, setHealth] = useState(100);
   const [enemies, setEnemies] = useState(
-    ENEMY_SPAWNS.map((pos, i) => ({ id: `enemy-${i}`, position: pos }))
+    ENEMY_SPAWNS.map((pos, i) => ({ id: `enemy-${i}`, position: pos, health: 100 }))
   );
   
   const [bulletEffects, setBulletEffects] = useState<{ id: string; start: THREE.Vector3; end: THREE.Vector3 }[]>([]);
@@ -41,6 +41,21 @@ export default function App() {
   const [hasStarted, setHasStarted] = useState(false);
   const [moveInput, setMoveInput] = useState({ x: 0, z: 0 });
   const playerRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
+
+  const onEnemyHit = useCallback((id: string) => {
+    setEnemies(prev => {
+        const enemy = prev.find(e => e.id === id);
+        if (!enemy) return prev;
+        
+        const newHealth = enemy.health - 25;
+        if (newHealth <= 0) {
+            setKills(k => k + 1);
+            return prev.filter(e => e.id !== id);
+        }
+        
+        return prev.map(e => e.id === id ? { ...e, health: newHealth } : e);
+    });
+  }, []);
 
   const onShoot = useCallback((position: THREE.Vector3, direction: THREE.Vector3) => {
     // Show a bullet trail
@@ -52,23 +67,14 @@ export default function App() {
     }, 50);
 
     // Hit detection using Raycaster
-    const raycaster = new THREE.Raycaster(position, direction);
-    // Find enemies in the scene
-    // We can use a ref to the scene or just look through children
-    // In this simple case, we'll check our 'enemies' state and positions
-    
     enemies.forEach(enemy => {
-        // Simple distance check from ray to point (approximate hit box)
-        // Better: Ray vs Bounding Box
         const enemyCenter = new THREE.Vector3(...enemy.position);
-        enemyCenter.y += 1; // Center of 2m tall enemy
+        enemyCenter.y += 1; 
         
         const bulletRay = new THREE.Ray(position, direction);
         const distanceToEnemy = bulletRay.distanceToPoint(enemyCenter);
         
-        if (distanceToEnemy < 0.8) { // Hitbox radius
-            // Check if blocked by walls? For now, simple hit
-            // Calculate distance to ensure we hit the closest thing
+        if (distanceToEnemy < 0.8) { 
             const dist = position.distanceTo(enemyCenter);
             if (dist < 50) {
                 onEnemyHit(enemy.id);
@@ -76,15 +82,10 @@ export default function App() {
         }
     });
 
-  }, [enemies]);
-
-  const onEnemyHit = (id: string) => {
-    setEnemies(prev => prev.filter(e => e.id !== id));
-    setKills(prev => prev + 1);
-  };
+  }, [enemies, onEnemyHit]);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full bg-ff-dark">
       <KeyboardControls
         map={[
           { name: "forward", keys: ["ArrowUp", "w", "W"] },
@@ -94,8 +95,8 @@ export default function App() {
           { name: "jump", keys: ["Space"] },
         ]}
       >
-        <Canvas shadows camera={{ fov: 45 }}>
-          <Sky sunPosition={[100, 10, 100]} />
+        <Canvas shadows camera={{ fov: 45, near: 0.1, far: 1000 }}>
+          <Sky sunPosition={[100, 20, 100]} />
           <Environment preset="night" />
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} intensity={1} castShadow />
@@ -109,14 +110,18 @@ export default function App() {
           </Physics>
 
           {!hasStarted && (
-            <group position={[0, 0, 10]}>
+            <group position={[0, -0.5, 10]} rotation={[0, Math.PI, 0]}>
                 <mesh position={[0, 1.6, -5]}>
-                    <sphereGeometry args={[0.5, 32, 32]} />
-                    <meshStandardMaterial color="white" />
+                    <sphereGeometry args={[0.4, 32, 32]} />
+                    <meshStandardMaterial color="#fff" />
                 </mesh>
-                <mesh position={[0, 0.5, -5]}>
-                    <boxGeometry args={[1, 2, 0.5]} />
-                    <meshStandardMaterial color="ff-yellow" />
+                <mesh position={[0, 0.7, -5]} castShadow>
+                    <boxGeometry args={[0.8, 1.4, 0.4]} />
+                    <meshStandardMaterial color="#ffcc00" metalness={0.7} roughness={0.2} />
+                </mesh>
+                <mesh position={[0, -0.1, -5]}>
+                    <boxGeometry args={[0.8, 0.2, 0.8]} />
+                    <meshStandardMaterial color="#111" />
                 </mesh>
             </group>
           )}
